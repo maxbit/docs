@@ -58,7 +58,7 @@ Adding a new jenkins job and configure Zuul for a given project in gerrit
 *************************************************************************
 Zull configuration consist of 4 basic parts.
 
-1. update **site.pp** to include any new templates that will be used for the job
+1. update **hieradata** to include any new templates that will be used for the job in **runtime_project/files/hiera/hieradata/Debian/nodetype/ci.yaml**
 
 	* this is only needed if you need a new compiler option, or new tool that will not exist on the build server.
 
@@ -68,15 +68,11 @@ Zull configuration consist of 4 basic parts.
 
 		.. sourcecode:: yaml
 
-			class { cdk_project::jenkins:
-				vhost_name                        => $node_vhost,
-				jenkins_jobs_password             => ,        
-				job_builder_configs               => [  'fortify-scan.yaml',
-				                                       'pet-clinic.yaml',
-				                                       'publish-to-stackato.yaml',
-				                                       '<new_job_template_name>.yaml'
-				                                     ],
-			}
+			cdk_project::jenkins::job_builder_configs:
+				- 'fortify-scan.yaml'
+				- 'tutorials.yaml'
+				- 'publish-to-stackato.yaml'
+				- '<new_job_template_name>.yaml'
 
 2. configure the new template into **runtime_project/templates/jenkins_job_builder/config/**
 
@@ -91,25 +87,26 @@ Zull configuration consist of 4 basic parts.
 	.. sourcecode:: yaml
 
 		projects:
-		 - name: pet-clinic
+		 - name: tutorials
 		   check:
-		     - pet-clinic-maven-package
-		     - pet-clinic-fortify-scan
+		     - tutorials-maven-package
+		     - tutorials-fortify-scan
 		   gate:
-		     - pet-clinic-maven-package
-		     - pet-clinic-<new_job_name>
+		     - tutorials-maven-package
+		     - tutorials-<new_job_name>
 		   release:
-		     - pet-clinic-publish-to-stackato
+		     - tutorials-publish-to-stackato
 
 
 4. add the project section to **runtime_project/files/jenkins_job_builder/config/projects.yaml**
 
-	* this will define the jobs to be created in jenkins, job names will be mapped to buiders by zuul. The name must match the job-template layout file (line 2 in the jenkins_job_builder folder).
+	* this will define the jobs to be created in jenkins, job names will be mapped to buiders by zuul. The "name" must match the job-template layout file (line 2 in the jenkins_job_builder file), and the "git_project" must match with the name of your project in gerrit.
 
 	.. sourcecode:: yaml
 
 		projects:
-		   name: pet-clinic
+		   name: tutorials
+		   git_project: tutorials
 		   branch: master
 		   jobs:
 		    - '{name}-maven-package'
@@ -142,17 +139,17 @@ Remove a project in gerrit
 	.. sourcecode:: sql
 
 		select * from account_project_watches;
-		delete from account_project_watches where project_name = 'pet-clinic-2'
+		delete from account_project_watches where project_name = 'tutorials-2'
 		delete changes
-		select * from changes where dest_project_name = 'pet-clinic-2';
-		delete from changes where dest_project_name = 'pet-clinic-2';
+		select * from changes where dest_project_name = 'tutorials-2';
+		delete from changes where dest_project_name = 'tutorials-2';
 
 * Remove the repo from disk.
 
 	.. sourcecode:: console
 
-		$ rm -rf /var/lib/git/pet-clinic-2.git
-		$ rm -rf /home/gerrit2/review_site/git/pet-clinic-2.git/
+		$ rm -rf /var/lib/git/tutorials-2.git
+		$ rm -rf /home/gerrit2/review_site/git/tutorials-2.git/
 
 .. Note:: this should be done on all replicas
 
